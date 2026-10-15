@@ -32,11 +32,10 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or postman)
     if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive in dev/demo
+    return callback(new Error(`Origine CORS non autorisée : ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

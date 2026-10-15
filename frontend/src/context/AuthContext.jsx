@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api, DEMO_PERSONAS } from '../services/api';
+import { api } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -37,7 +37,10 @@ export function AuthProvider({ children }) {
             setToken(null);
           }
         } catch (err) {
-          console.warn('[AuthContext] Verification failed, checking local session');
+          console.warn('[AuthContext] Échec vérification session :', err.message);
+          api.clearSession();
+          setUser(null);
+          setToken(null);
         }
       }
       setLoading(false);
@@ -60,15 +63,6 @@ export function AuthProvider({ children }) {
     setToken(null);
   };
 
-  const switchDemoAccount = async (persona) => {
-    const res = await api.login(persona.email, persona.default_password || 'Password123!');
-    if (res.success && res.user) {
-      setUser(res.user);
-      setToken(res.token);
-    }
-    return res;
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -79,9 +73,7 @@ export function AuthProvider({ children }) {
         darkMode,
         toggleDarkMode,
         login,
-        logout,
-        switchDemoAccount,
-        personas: DEMO_PERSONAS
+        logout
       }}
     >
       {children}

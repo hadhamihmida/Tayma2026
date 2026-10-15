@@ -1,19 +1,26 @@
-const path = require('path');
-const fs = require('fs');
 const mysql = require('mysql2/promise');
 const config = require('./index');
 
 let pool = null;
-let dbMode = 'MYSQL';
 
 // JSON columns that should always be parsed to objects if returned as string
 const JSON_COLUMNS = new Set([
+  'currencies',
+  'required_documents',
+  'draft_data',
+  'extracted_ocr_data',
+  'ai_result',
+  'details',
+  'old_data',
+  'new_data',
+  'payload',
+  'response',
+  'setting_value',
   'temporary_data',
   'risk_factors',
   'fraud_details',
   'ocr_extracted_data',
   'ocr_confidence',
-  'details',
   'old_value',
   'new_value',
   'sap_idoc_payload'
@@ -34,13 +41,31 @@ function parseJsonFields(row) {
   return parsed;
 }
 
-// Convert PostgreSQL $1, $2 parameter placeholders into MySQL ? placeholders
-function convertDollarParamsToQuestionMarks(sql) {
-  return sql.replace(/\$(\d+)/g, '?');
+/**
+ * Garde-fou de sécurité : vérification stricte, insensible à la casse et sans espaces
+ * pour interdire absolument tout ciblage de l'ancienne base masterdata_ia.
+ */
+function assertSafeDatabaseTarget(dbName) {
+  if (!dbName || typeof dbName !== 'string') {
+    throw new Error('[DB Security] Nom de base de données non défini dans la configuration.');
+  }
+
+  const normalized = dbName.toLowerCase().replace(/[\s_\-]+/g, '');
+  if (normalized.includes('masterdataia')) {
+    console.error('================================================================');
+    console.error('⛔ ERREUR CRITIQUE DE SÉCURITÉ :');
+    console.error(`Interdiction formelle de se connecter à la base "${dbName}".`);
+    console.error('La base historique "masterdata_ia" est sanctuarisée et intouchable.');
+    console.error('Veuillez configurer DB_NAME=tui_masterdata_prod dans votre .env');
+    console.error('================================================================');
+    process.exit(1);
+  }
 }
 
 async function getDb() {
   if (pool) return pool;
+
+  assertSafeDatabaseTarget(config.DB_NAME);
 
   try {
     pool = mysql.createPool({
@@ -57,122 +82,46 @@ async function getDb() {
 
     // Test connection
     const connection = await pool.getConnection();
-    console.log(`[DB] Connecté avec succès à MySQL (${config.DB_NAME} sur ${config.DB_HOST}:${config.DB_PORT})`);
-
-    // Ensure required security tables and columns exist
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS refresh_tokens (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        token VARCHAR(500) NOT NULL,
-        expires_at DATETIME NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_token (token(191)),
-        INDEX idx_user (user_id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    // Ensure users security columns exist
-    try {
-      await connection.query(`
-        ALTER TABLE users 
-          ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0,
-          ADD COLUMN IF NOT EXISTS locked_until DATETIME DEFAULT NULL,
-          ADD COLUMN IF NOT EXISTS last_login_at DATETIME DEFAULT NULL,
-          ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255) DEFAULT NULL,
-          ADD COLUMN IF NOT EXISTS reset_token_expires_at DATETIME DEFAULT NULL;
-      `);
-    } catch (colErr) {
-      // Ignore if columns already exist or MariaDB doesn't support IF NOT EXISTS in ALTER
-    }
-
+    console.log(`[DB] Connecté avec succès à MySQL (${config.DB_NAME} en tant que ${config.DB_USER} sur ${config.DB_HOST}:${config.DB_PORT})`);
     connection.release();
-    dbMode = 'MYSQL';
+
     return pool;
   } catch (err) {
-    console.warn('[DB] Impossible de se connecter à MySQL, tentative de bascule vers le moteur de secours PGlite...', err.message);
-    
-    // Fallback to PGlite
-    const { PGlite } = require('@electric-sql/pglite');
-    const dataDir = path.join(__dirname, '../../data/pglite');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    const pglite = new PGlite(dataDir);
-    await pglite.waitReady;
-    dbMode = 'PGLITE';
-    console.log('[DB] Moteur de secours PostgreSQL 16 (PGlite WASM) actif');
+    console.error(`[DB] Erreur critique lors de la connexion à MySQL (${config.DB_NAME}):`, err.message);
+    throw err;
+  }
+}
 
-    pool = {
-      query: async (text, params = []) => {
-        const res = await pglite.query(text, params);
-        return {
-          rows: (res.rows || []).map(parseJsonFields),
-          rowCount: res.affectedRows || (res.rows ? res.rows.length : 0)
-        };
-      },
-      exec: async (sql) => pglite.exec(sql)
+async function query(sql, params = []) {
+  const db = await getDb();
+  try {
+    const [rows, fields] = await db.query(sql, params);
+
+    // Format query results to match unified format
+    if (Array.isArray(rows)) {
+      const parsedRows = rows.map(r => parseJsonFields(r));
+      return {
+        rows: parsedRows,
+        rowCount: parsedRows.length,
+        fields
+      };
+    }
+
+    return {
+      rows: [],
+      rowCount: rows.affectedRows || 0,
+      insertId: rows.insertId,
+      affectedRows: rows.affectedRows
     };
-    return pool;
-  }
-}
-
-async function query(text, params = []) {
-  await getDb();
-
-  if (dbMode === 'MYSQL') {
-    const convertedSql = convertDollarParamsToQuestionMarks(text);
-    
-    // Ensure all JSON params are stringified if passed as objects/arrays
-    const sanitizedParams = params.map(p => {
-      if (p !== null && typeof p === 'object' && !(p instanceof Date)) {
-        return JSON.stringify(p);
-      }
-      return p;
-    });
-
-    const [results, fields] = await pool.query(convertedSql, sanitizedParams);
-
-    if (Array.isArray(results)) {
-      return {
-        rows: results.map(parseJsonFields),
-        rowCount: results.length
-      };
-    } else {
-      return {
-        rows: [],
-        rowCount: results.affectedRows || 0,
-        insertId: results.insertId
-      };
-    }
-  } else {
-    return pool.query(text, params);
-  }
-}
-
-async function exec(sql) {
-  await getDb();
-  if (dbMode === 'MYSQL') {
-    const connection = await pool.getConnection();
-    try {
-      const statements = sql
-        .split(';')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-      for (const stmt of statements) {
-        await connection.query(stmt);
-      }
-    } finally {
-      connection.release();
-    }
-  } else {
-    return pool.exec(sql);
+  } catch (err) {
+    console.error('[DB Query Error]:', { sql: sql.substring(0, 150), message: err.message });
+    throw err;
   }
 }
 
 module.exports = {
   getDb,
   query,
-  exec,
-  getMode: () => dbMode
+  assertSafeDatabaseTarget,
+  parseJsonFields
 };

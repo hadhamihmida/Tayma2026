@@ -60,7 +60,7 @@ export default function AdminView() {
   // Form states
   const [createForm, setCreateForm] = useState({
     email: '',
-    password: 'Password123!',
+    password: '',
     full_name: '',
     role: 'REQUESTER',
     geographic_scope: 'WESTERN'
@@ -71,7 +71,7 @@ export default function AdminView() {
     geographic_scope: '',
     is_active: true
   });
-  const [resetPasswordVal, setResetPasswordVal] = useState('Password123!');
+  const [resetPasswordVal, setResetPasswordVal] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
   const [actionError, setActionError] = useState('');
 
@@ -167,7 +167,7 @@ export default function AdminView() {
         setShowCreateModal(false);
         setCreateForm({
           email: '',
-          password: 'Password123!',
+          password: '',
           full_name: '',
           role: 'REQUESTER',
           geographic_scope: 'WESTERN'
@@ -554,7 +554,7 @@ export default function AdminView() {
                       <button
                         onClick={() => {
                           setSelectedUser(u);
-                          setResetPasswordVal('Password123!');
+                          setResetPasswordVal('');
                           setShowResetModal(true);
                         }}
                         className="p-1.5 hover:bg-amber-50 rounded-lg text-slate-500 hover:text-amber-600 transition-colors"

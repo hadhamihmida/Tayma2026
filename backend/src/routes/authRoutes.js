@@ -303,10 +303,7 @@ router.post('/forgot-password', validate('forgotPassword'), async (req, res) => 
 
     return res.json({
       success: true,
-      message: 'Lien de réinitialisation généré.',
-      // Provided in development/demo mode to easily test the soutenance workflow:
-      demo_reset_token: resetToken,
-      demo_instructions: 'Utilisez ce jeton pour définir un nouveau mot de passe directement dans la fenêtre modale.'
+      message: 'Si un compte actif correspond à cette adresse e-mail, un lien de réinitialisation sécurisé a été expédié par e-mail.'
     });
   } catch (err) {
     console.error('[Auth Route] Erreur forgot-password :', err);
@@ -389,41 +386,5 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/auth/demo-users (Mode démo discret pour la soutenance)
-router.get('/demo-users', async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT id, email, full_name, role, geographic_scope, is_active 
-       FROM users 
-       WHERE is_active = 1
-       ORDER BY FIELD(role, 'ADMIN', 'MANAGER_APPROVAL', 'MASTER_DATA_AGENT', 'REQUESTER', 'VENDOR')`
-    );
-
-    // Map into friendly personas
-    const demoAccounts = result.rows.map(u => {
-      let roleLabel = u.role;
-      if (u.role === 'REQUESTER') {
-        roleLabel = u.geographic_scope === 'NORDIC' ? 'REQUESTER_NORDIC' : 'REQUESTER_WESTERN';
-      }
-      return {
-        id: u.id,
-        email: u.email,
-        full_name: u.full_name,
-        role: u.role,
-        roleLabel,
-        geographic_scope: u.geographic_scope,
-        default_password: 'Password123!'
-      };
-    });
-
-    return res.json({
-      success: true,
-      users: demoAccounts,
-      default_password: 'Password123!'
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-});
 
 module.exports = router;

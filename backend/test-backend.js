@@ -56,15 +56,11 @@ async function runTests() {
     console.log(`✓ 1. Health check: status ${health.status} (${health.body.status})`);
     if (health.status !== 200) throw new Error('Health check failed');
 
-    // 2. Demo users
-    const demo = await request('/api/auth/demo-users');
-    console.log(`✓ 2. Demo users: ${demo.body.users.length} comptes RBAC trouvés`);
-    if (demo.body.users.length < 4) throw new Error('Demo users count mismatch');
 
     // 3. Login as Agent
     const loginAgent = await request('/api/auth/login', {
       method: 'POST',
-      body: { email: 'agent.masterdata@tui.com', password: 'Password123!' }
+      body: { email: 'agent.masterdata@tui.com', password: process.env.TEST_USER_PASSWORD || 'TestPass2026!' }
     });
     console.log(`✓ 3. Login Agent: Token obtenu pour ${loginAgent.body.user.full_name} (${loginAgent.body.user.role})`);
     const agentToken = loginAgent.body.token;
@@ -72,7 +68,7 @@ async function runTests() {
     // 4. Login as Manager
     const loginMgr = await request('/api/auth/login', {
       method: 'POST',
-      body: { email: 'manager.approval@tui.com', password: 'Password123!' }
+      body: { email: 'manager.approval@tui.com', password: process.env.TEST_USER_PASSWORD || 'TestPass2026!' }
     });
     console.log(`✓ 4. Login Manager: Token obtenu pour ${loginMgr.body.user.full_name} (${loginMgr.body.user.role})`);
     const mgrToken = loginMgr.body.token;

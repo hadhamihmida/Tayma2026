@@ -127,55 +127,6 @@ export default function RequesterPortal() {
     verifyIbanLive(form.iban, c);
   };
 
-  const fillTemplate = (type) => {
-    if (type === 'CLEAN') {
-      const isNordic = user?.geographic_scope === 'NORDIC';
-      setForm({
-        legal_name: isNordic ? 'Stockholm Clean Energy AB' : 'Bordeaux Logistics & Freight SAS',
-        tax_id_vat: isNordic ? 'SE5569876543' : 'FR44123456789',
-        country: isNordic ? 'SE' : 'FR',
-        address: isNordic ? 'Sveavägen 44, 111 34 Stockholm, Sweden' : '12 Quai des Chartrons, 33000 Bordeaux, France',
-        iban: isNordic ? 'SE4550000000058398257466' : 'FR7630006000011234567890189',
-        bic_swift: isNordic ? 'SWEDSESS' : 'BNPAFRPP',
-        bank_name: isNordic ? 'Swedbank' : 'BNP Paribas',
-        contact_email: isNordic ? 'billing@stockholm-energy.se' : 'contact@bordeaux-logistics.fr',
-        annual_spend: '95000',
-        request_type: 'CREATION'
-      });
-      verifyIbanLive(
-        isNordic ? 'SE4550000000058398257466' : 'FR7630006000011234567890189',
-        isNordic ? 'SE' : 'FR'
-      );
-    } else if (type === 'MISMATCH') {
-      setForm({
-        legal_name: 'Provence Catering & Services SARL',
-        tax_id_vat: 'FR88765432100',
-        country: 'FR',
-        address: '8 Boulevard Michelet, 13008 Marseille, France',
-        iban: 'SE4550000000058398257466',
-        bic_swift: 'SWEDSESS',
-        bank_name: 'Swedbank Stockholm',
-        contact_email: 'provence-urgent@temp-mail.org',
-        annual_spend: '140000',
-        request_type: 'CREATION'
-      });
-      verifyIbanLive('SE4550000000058398257466', 'FR');
-    } else if (type === 'INVALID_MODULO') {
-      setForm({
-        legal_name: 'Lyon Express Transport SARL',
-        tax_id_vat: 'FR99887766554',
-        country: 'FR',
-        address: '45 Rue de la République, 69002 Lyon, France',
-        iban: 'FR7630006000011234567890199',
-        bic_swift: 'BNPAFRPP',
-        bank_name: 'BNP Paribas',
-        contact_email: 'direction@lyon-transport.fr',
-        annual_spend: '60000',
-        request_type: 'CREATION'
-      });
-      verifyIbanLive('FR7630006000011234567890199', 'FR');
-    }
-  };
 
   const handleCreateRequest = async (e) => {
     e.preventDefault();
@@ -424,35 +375,6 @@ export default function RequesterPortal() {
               </button>
             </div>
 
-            {/* Quick Demo Template Pills */}
-            <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-200 space-y-2">
-              <span className="text-[11px] font-semibold text-[var(--primary)] block">
-                Pré-remplissage rapide pour scénario de soutenance :
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => fillTemplate('CLEAN')}
-                  className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded text-xs font-medium hover:bg-emerald-100 transition-colors"
-                >
-                  ✓ Cas Sain (IBAN Valide SEPA)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillTemplate('MISMATCH')}
-                  className="px-2.5 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded text-xs font-medium hover:bg-amber-100 transition-colors"
-                >
-                  ⚠ Cas Discordance Pays (Siège FR vs IBAN SE)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillTemplate('INVALID_MODULO')}
-                  className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs font-medium hover:bg-rose-100 transition-colors"
-                >
-                  ✗ Cas Échec Clé Modulo 97
-                </button>
-              </div>
-            </div>
 
             {formError && (
               <div className="p-3 bg-rose-50 border border-rose-200 text-[var(--danger)] rounded-lg text-xs">

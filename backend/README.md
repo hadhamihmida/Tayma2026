@@ -21,7 +21,6 @@
 |---|---|---|---|
 | **Auth** | `POST /api/auth/login` | Public | Authentification et émission du token JWT |
 | | `GET /api/auth/me` | Tous | Profil de l'utilisateur connecté |
-| | `GET /api/auth/demo-users` | Public | Liste des comptes de test pour bascule instantanée |
 | **Demandes** | `GET /api/requests` | Tous (filtré RBAC) | File d'attente selon le rôle et le scope |
 | | `GET /api/requests/:id` | Tous (filtré) | Détail d'un dossier avec documents et audit trail |
 | | `POST /api/requests` | Requester, Vendor | Création d'un dossier avec criblage IA automatique |

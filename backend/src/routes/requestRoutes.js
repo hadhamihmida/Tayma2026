@@ -93,7 +93,6 @@ router.get('/', authenticateToken, async (req, res) => {
         r.requester_id = ? 
         OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(r.temporary_data, '$.contact_email'))) = ? 
         OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(r.temporary_data, '$.email'))) = ?
-        OR r.id = 1
       )`;
       params.push(userEmail.toLowerCase());
     } else if (role === 'REQUESTER') {
@@ -169,8 +168,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (req.user.role === 'VENDOR') {
       const contactEmail = request.temporary_data?.contact_email || request.temporary_data?.email;
       const isOwner = request.requester_id === req.user.id || 
-                      (contactEmail && contactEmail.toLowerCase() === req.user.email.toLowerCase()) ||
-                      request.id === 1; // Demo default
+                      (contactEmail && contactEmail.toLowerCase() === req.user.email.toLowerCase());
       if (!isOwner) {
         return res.status(403).json({ success: false, error: 'Accès non autorisé à ce dossier fournisseur.' });
       }

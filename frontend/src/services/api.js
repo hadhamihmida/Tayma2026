@@ -4,83 +4,7 @@
 
 const API_BASE = 'http://localhost:5000/api';
 
-// 6 Official Demo Personas matching MySQL masterdata_ia database
-export const DEMO_PERSONAS = [
-  {
-    id: 6,
-    email: 'admin@group.com',
-    full_name: 'Marc Lefebvre',
-    role: 'ADMIN',
-    scope: 'GLOBAL',
-    avatar: '👑',
-    label: 'Administrateur Sécurité & Gouvernance',
-    badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
-    defaultView: 'admin',
-    description: 'Accès total : CRUD utilisateurs, matrice RBAC, piste d audit SOX, exports CSV/PDF'
-  },
-  {
-    id: 5,
-    email: 'manager.global@group.com',
-    full_name: 'Claire Vasseur',
-    role: 'MANAGER_APPROVAL',
-    scope: 'GLOBAL',
-    avatar: '👩‍⚖️',
-    label: 'Manager Approbateur Financier',
-    badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    defaultView: 'manager',
-    description: 'Arbitrage risque, approbation/rejet avec motif obligatoire, synchronisation SAP IDoc'
-  },
-  {
-    id: 4,
-    email: 'agent.global@group.com',
-    full_name: 'Alexandre Dupont',
-    role: 'MASTER_DATA_AGENT',
-    scope: 'GLOBAL',
-    avatar: '👨‍💼',
-    label: 'Agent Opérationnel Master Data',
-    badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
-    defaultView: 'agent',
-    description: 'Revue de conformité, rapprochement côte-à-côte OCR vs déclaré, explicabilité SHAP'
-  },
-  {
-    id: 2,
-    email: 'requester.western@group.com',
-    full_name: 'Sophie Martin',
-    role: 'REQUESTER',
-    roleComposite: 'REQUESTER_WESTERN',
-    scope: 'WESTERN',
-    avatar: '👩‍💻',
-    label: 'Demandeur Achats (Périmètre Western)',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    defaultView: 'requester',
-    description: 'Création de demandes avec validation IBAN Modulo 97 en direct, filtré France/Espagne/Italie'
-  },
-  {
-    id: 3,
-    email: 'requester.nordic@group.com',
-    full_name: 'Lars Lindqvist',
-    role: 'REQUESTER',
-    roleComposite: 'REQUESTER_NORDIC',
-    scope: 'NORDIC',
-    avatar: '👨‍💻',
-    label: 'Demandeur Achats (Périmètre Nordic)',
-    badgeClass: 'bg-teal-100 text-teal-800 border-teal-200',
-    defaultView: 'requester',
-    description: 'Création et suivi des dossiers fournisseurs scandinaves (Suède, Bolagsverket)'
-  },
-  {
-    id: 1,
-    email: 'contact@novatech-solutions.fr',
-    full_name: 'Jean Dupont (Novatech)',
-    role: 'VENDOR',
-    scope: 'WESTERN',
-    avatar: '🏢',
-    label: 'Fournisseur Externe (Novatech Solutions)',
-    badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
-    defaultView: 'vendor',
-    description: 'Frise chronologique d avancement, dépôt RIB/Kbis par glisser-déposer, suivi temps réel'
-  }
-];
+
 
 class ApiClient {
   constructor() {
@@ -182,7 +106,7 @@ class ApiClient {
   }
 
   // --- Auth Methods ---
-  async login(email, password = 'Password123!') {
+  async login(email, password) {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -231,10 +155,6 @@ class ApiClient {
     return res.json();
   }
 
-  async getDemoUsers() {
-    const res = await fetch(`${API_BASE}/auth/demo-users`);
-    return res.json();
-  }
 
   // --- Requests Methods ---
   async getRequests(params = {}) {

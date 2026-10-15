@@ -317,9 +317,10 @@ router.post('/users/:id/reset-password', async (req, res) => {
 
   try {
     const { new_password } = req.body;
-    const targetPassword = new_password && new_password.trim().length >= 6 
-      ? new_password.trim() 
-      : 'Password123!';
+    if (!new_password || new_password.trim().length < 8) {
+      return res.status(400).json({ success: false, error: 'Un mot de passe de réinitialisation d\'au moins 8 caractères est requis.' });
+    }
+    const targetPassword = new_password.trim();
 
     const userRes = await query('SELECT email, full_name FROM users WHERE id = ?', [targetId]);
     if (userRes.rows.length === 0) {

@@ -77,7 +77,7 @@ async function runTests() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: p.email,
-          password: 'Password123!'
+          password: process.env.TEST_USER_PASSWORD || 'TestPass2026!'
         })
       });
       assert(res.ok && res.data.success && res.data.token && res.data.user.role === p.role, `Connexion réussie pour ${p.name} (${p.email})`);
