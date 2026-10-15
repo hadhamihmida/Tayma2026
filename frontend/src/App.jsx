@@ -11,7 +11,7 @@ import AdminView from './views/AdminView';
 import AnalyticsView from './views/AnalyticsView';
 import RagAssistantModal from './components/RagAssistantModal';
 import VendorCatalogModal from './components/VendorCatalogModal';
-import { ShieldAlert, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 
 function MainApp() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -19,6 +19,7 @@ function MainApp() {
   const [currentView, setCurrentView] = useState('agent');
   const [isRagOpen, setIsRagOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Set default view on user login based on their role
   useEffect(() => {
@@ -47,9 +48,9 @@ function MainApp() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-4">
-        <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4" />
-        <p className="text-xs text-slate-400 font-mono tracking-wider uppercase">
+      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 border-3 border-[var(--primary-light)] border-t-[var(--primary)] rounded-full animate-spin mb-4" />
+        <p className="text-xs text-[var(--text-muted)] font-mono tracking-wider uppercase">
           Vérification des habilitations de sécurité...
         </p>
       </div>
@@ -85,26 +86,29 @@ function MainApp() {
   const isViewAuthorized = canAccessView(currentView);
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans overflow-hidden text-slate-900 dark:text-slate-100 antialiased">
+    <div className="flex h-screen bg-[var(--bg)] font-sans overflow-hidden text-[var(--text)] antialiased">
       {/* 1. Persistent Role-Guarded Sidebar */}
       <Sidebar
         currentView={currentView}
         setCurrentView={setCurrentView}
         onOpenRag={() => setIsRagOpen(true)}
         onOpenCatalog={() => setIsCatalogOpen(true)}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
       />
 
       {/* 2. Main Content Wrapper */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden main-content">
         {/* Top Header */}
         <Header
           currentView={currentView}
           onOpenRag={() => setIsRagOpen(true)}
           onOpenCatalog={() => setIsCatalogOpen(true)}
+          onToggleMobile={() => setMobileSidebarOpen(prev => !prev)}
         />
 
         {/* Scrollable Main Views Area */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-[var(--bg)]">
           {isViewAuthorized ? (
             <>
               {currentView === 'vendor' && <VendorPortal />}
@@ -115,15 +119,15 @@ function MainApp() {
               {currentView === 'analytics' && <AnalyticsView activePersona={user} />}
             </>
           ) : (
-            <div className="p-12 text-center max-w-lg mx-auto mt-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="w-12 h-12 bg-rose-500/10 text-rose-600 mx-auto rounded-xl flex items-center justify-center">
+            <div className="p-8 text-center max-w-lg mx-auto mt-12 bg-[var(--surface)] rounded-xl border border-[var(--border)] shadow-xs space-y-4">
+              <div className="w-12 h-12 bg-rose-50 text-[var(--danger)] mx-auto rounded-xl flex items-center justify-center">
                 <Lock className="w-6 h-6" />
               </div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base font-bold text-[var(--text)]">
                 Accès Non Autorisé (Contrôle RBAC)
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Votre profil métier (<strong className="font-mono">{user.role}</strong>) n'a pas les prérogatives requises pour accéder à ce module.
+              <p className="text-xs text-[var(--text-muted)]">
+                Votre profil métier (<strong className="font-mono text-[var(--text)]">{user.role}</strong>) n'a pas les prérogatives requises pour accéder à ce module.
               </p>
               <button
                 onClick={() => {
@@ -133,7 +137,7 @@ function MainApp() {
                   else if (user.role === 'MANAGER_APPROVAL') setCurrentView('manager');
                   else setCurrentView('admin');
                 }}
-                className="px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-500"
+                className="px-4 py-2 bg-[var(--primary)] text-white text-xs font-semibold rounded-lg hover:bg-blue-800 transition-colors"
               >
                 Retour à mon espace dédié
               </button>
@@ -142,14 +146,14 @@ function MainApp() {
         </main>
 
         {/* Minimal Financial Footer */}
-        <footer className="h-10 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 shrink-0 select-none">
+        <footer className="h-10 bg-[var(--surface)] border-t border-[var(--border)] px-6 flex items-center justify-between text-[11px] text-[var(--text-muted)] shrink-0 select-none">
           <div className="flex items-center gap-2">
             <span>© 2026 TUI Group Finance — Plateforme Master Data IA</span>
-            <span className="hidden sm:inline text-slate-400">•</span>
-            <span className="hidden sm:inline font-mono text-[10px] text-slate-400">Conformité SOX Section 404 & SEPA Modulo 97</span>
+            <span className="hidden sm:inline text-slate-300">•</span>
+            <span className="hidden sm:inline font-mono text-[10px] text-[var(--text-muted)]">Conformité SOX Section 404 & SEPA Modulo 97</span>
           </div>
           <div className="flex items-center gap-3 font-mono text-[10px]">
-            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               SAP S/4HANA Connector : READY
             </span>
