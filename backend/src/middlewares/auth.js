@@ -52,7 +52,18 @@ async function authenticateToken(req, res, next) {
         return res.status(403).json({ success: false, error: 'Compte utilisateur inactif ou révoqué', code: 'USER_INACTIVE' });
       }
 
-      req.user = userRes.rows[0];
+      const user = userRes.rows[0];
+      try {
+        const projRes = await query(
+          'SELECT p.id, p.code, p.name FROM user_projects up JOIN projects p ON up.project_id = p.id WHERE up.user_id = ?',
+          [user.id]
+        );
+        user.projects = projRes.rows || [];
+      } catch (e) {
+        user.projects = [];
+      }
+
+      req.user = user;
       next();
     } catch (dbErr) {
       console.error('[Auth Middleware] Erreur vérification utilisateur :', dbErr);
@@ -67,13 +78,14 @@ function requireRole(...roles) {
       return res.status(401).json({ success: false, error: 'Non authentifié' });
     }
 
-    const userRole = req.user.role;
+    const userRole = (req.user.role || '').toUpperCase();
+    const upperRoles = roles.map(r => r.toUpperCase());
     // Map composite requester roles
     const userRoleComposite = (userRole === 'REQUESTER') 
       ? `REQUESTER_${req.user.geographic_scope}` 
       : userRole;
 
-    const hasAccess = roles.includes(userRole) || roles.includes(userRoleComposite) || userRole === 'ADMIN';
+    const hasAccess = upperRoles.includes(userRole) || upperRoles.includes(userRoleComposite) || userRole === 'ADMIN';
 
     if (!hasAccess) {
       return res.status(403).json({

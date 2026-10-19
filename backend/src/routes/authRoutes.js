@@ -145,19 +145,36 @@ router.post('/login', loginLimiter, validate('login'), async (req, res) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // Persist refresh token
+    // Persist refresh token with SHA-256 hash
     const refreshExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     await query(
-      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
-      [user.id, refreshToken, refreshExpires]
+      'INSERT INTO refresh_tokens (user_id, token, token_hash, expires_at) VALUES (?, ?, ?, ?)',
+      [user.id, refreshToken, tokenHash, refreshExpires]
     );
+
+    // Fetch user projects from user_projects
+    let userProjects = [];
+    try {
+      const projRes = await query(
+        `SELECT p.id, p.code, p.name 
+         FROM user_projects up 
+         JOIN projects p ON up.project_id = p.id 
+         WHERE up.user_id = ?`,
+        [user.id]
+      );
+      userProjects = projRes.rows || [];
+    } catch (e) {
+      // Table user_projects might not have entries yet
+    }
 
     // Audit log
     await auditService.logAction({
       userId: user.id,
+      actorId: user.id,
       action: 'AUTH_LOGIN_SUCCESS',
       oldValue: null,
-      newValue: { role: user.role, scope: user.geographic_scope },
+      newValue: { role: user.role, scope: user.geographic_scope, projects_count: userProjects.length },
       ipAddress,
       userAgent
     });
@@ -172,7 +189,8 @@ router.post('/login', loginLimiter, validate('login'), async (req, res) => {
         full_name: user.full_name,
         role: user.role,
         geographic_scope: user.geographic_scope,
-        is_active: Boolean(user.is_active)
+        is_active: Boolean(user.is_active),
+        projects: userProjects
       }
     });
   } catch (err) {

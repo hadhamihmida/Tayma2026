@@ -5,8 +5,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "db:create": "node src/db/create_db.js",
+    "db:setup": "node src/db/setup.js",
+    "migrate": "node src/db/migrate.js",
+    "bootstrap:admin": "node src/db/bootstrap_admin.js",
     "seed": "node src/db/seed_all.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test-backend.js"
   },
   "keywords": [],
   "author": "",

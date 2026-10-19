@@ -163,18 +163,14 @@ router.post('/users', validate('createUser'), async (req, res) => {
 
     const newUserId = insertRes.insertId;
 
-    // Log admin action & audit trail
-    await query(
-      `INSERT INTO admin_actions (admin_id, target_user_id, action, details, ip_address, timestamp)
-       VALUES (?, ?, 'USER_CREATED', ?, ?, CURRENT_TIMESTAMP)`,
-      [adminId, newUserId, JSON.stringify({ email: cleanEmail, role, geographic_scope: scope, full_name }), ipAddress]
-    );
-
+    // Log audit trail with target_user_id and SHA-256 chaining
     await auditService.logAction({
+      actorId: adminId,
       userId: adminId,
+      targetUserId: newUserId,
       action: 'ADMIN_USER_CREATED',
-      oldValue: null,
-      newValue: { target_user_id: newUserId, email: cleanEmail, role, geographic_scope: scope },
+      oldData: null,
+      newData: { target_user_id: newUserId, email: cleanEmail, role, geographic_scope: scope, full_name: full_name.trim() },
       ipAddress
     });
 
@@ -230,17 +226,13 @@ router.put('/users/:id', validate('updateUser'), async (req, res) => {
       is_active: { old: Boolean(current.is_active), new: Boolean(newIsActive) }
     };
 
-    await query(
-      `INSERT INTO admin_actions (admin_id, target_user_id, action, details, ip_address, timestamp)
-       VALUES (?, ?, 'USER_UPDATED', ?, ?, CURRENT_TIMESTAMP)`,
-      [adminId, targetId, JSON.stringify(changes), ipAddress]
-    );
-
     await auditService.logAction({
+      actorId: adminId,
       userId: adminId,
+      targetUserId: targetId,
       action: 'ADMIN_USER_UPDATED',
-      oldValue: { role: current.role, scope: current.geographic_scope },
-      newValue: { role: newRole, scope: newScope, is_active: Boolean(newIsActive) },
+      oldData: { role: current.role, scope: current.geographic_scope, full_name: current.full_name, is_active: Boolean(current.is_active) },
+      newData: { role: newRole, scope: newScope, full_name: newFullName, is_active: Boolean(newIsActive) },
       ipAddress
     });
 
@@ -285,17 +277,13 @@ router.put('/users/:id/status', async (req, res) => {
 
     const actionName = newStatus ? 'USER_ACTIVATED' : 'USER_DEACTIVATED';
 
-    await query(
-      `INSERT INTO admin_actions (admin_id, target_user_id, action, details, ip_address, timestamp)
-       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [adminId, targetId, actionName, JSON.stringify({ previous_status: user.is_active, new_status: newStatus }), ipAddress]
-    );
-
     await auditService.logAction({
+      actorId: adminId,
       userId: adminId,
+      targetUserId: targetId,
       action: `ADMIN_${actionName}`,
-      oldValue: { is_active: Boolean(user.is_active) },
-      newValue: { is_active: Boolean(newStatus), target_email: user.email },
+      oldData: { is_active: Boolean(user.is_active) },
+      newData: { is_active: Boolean(newStatus), target_email: user.email },
       ipAddress
     });
 
@@ -344,17 +332,13 @@ router.post('/users/:id/reset-password', async (req, res) => {
     // Invalidate user sessions
     await query('DELETE FROM refresh_tokens WHERE user_id = ?', [targetId]);
 
-    await query(
-      `INSERT INTO admin_actions (admin_id, target_user_id, action, details, ip_address, timestamp)
-       VALUES (?, ?, 'PASSWORD_RESET_BY_ADMIN', ?, ?, CURRENT_TIMESTAMP)`,
-      [adminId, targetId, JSON.stringify({ email: userRes.rows[0].email }), ipAddress]
-    );
-
     await auditService.logAction({
+      actorId: adminId,
       userId: adminId,
+      targetUserId: targetId,
       action: 'ADMIN_PASSWORD_RESET',
-      oldValue: null,
-      newValue: { target_id: targetId, target_email: userRes.rows[0].email },
+      oldData: null,
+      newData: { target_id: targetId, target_email: userRes.rows[0].email },
       ipAddress
     });
 
@@ -388,17 +372,13 @@ router.delete('/users/:id', async (req, res) => {
     await query('UPDATE users SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [targetId]);
     await query('DELETE FROM refresh_tokens WHERE user_id = ?', [targetId]);
 
-    await query(
-      `INSERT INTO admin_actions (admin_id, target_user_id, action, details, ip_address, timestamp)
-       VALUES (?, ?, 'USER_SOFT_DELETED', ?, ?, CURRENT_TIMESTAMP)`,
-      [adminId, targetId, JSON.stringify({ email: userRes.rows[0].email }), ipAddress]
-    );
-
     await auditService.logAction({
+      actorId: adminId,
       userId: adminId,
+      targetUserId: targetId,
       action: 'ADMIN_USER_SOFT_DELETED',
-      oldValue: { is_active: true },
-      newValue: { is_active: false, target_email: userRes.rows[0].email },
+      oldData: { is_active: true },
+      newData: { is_active: false, target_email: userRes.rows[0].email },
       ipAddress
     });
 
@@ -424,6 +404,16 @@ router.get('/audit-logs', async (req, res) => {
       offset: offset || 0
     });
     return res.json({ success: true, ...data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/admin/audit-logs/verify
+router.get('/audit-logs/verify', async (req, res) => {
+  try {
+    const result = await auditService.verifyChain();
+    return res.json({ success: true, ...result });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }

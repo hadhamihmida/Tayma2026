@@ -87,7 +87,11 @@ async function getDb() {
 
     return pool;
   } catch (err) {
-    console.error(`[DB] Erreur critique lors de la connexion à MySQL (${config.DB_NAME}):`, err.message);
+    if (config.DB_USER === 'root') {
+      console.warn('⚠️ AVERTISSEMENT : L\'application est configurée pour se connecter avec "root". Il est fortement recommandé d\'utiliser l\'utilisateur applicatif "md_app".');
+    }
+
+    console.error(`[DB] Erreur critique lors de la connexion à MySQL (${config.DB_NAME} en tant que ${config.DB_USER}):`, err.message);
     throw err;
   }
 }
@@ -119,8 +123,13 @@ async function query(sql, params = []) {
   }
 }
 
+function getMode() {
+  return 'MySQL';
+}
+
 module.exports = {
   getDb,
+  getMode,
   query,
   assertSafeDatabaseTarget,
   parseJsonFields
